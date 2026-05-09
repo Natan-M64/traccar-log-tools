@@ -1,18 +1,17 @@
 services:
+  # Example Traccar service.
+  # In your own stack, keep your existing Traccar configuration.
   traccar:
     image: traccar/traccar:latest
     restart: unless-stopped
     ports:
       - "8082:8082"
-      # Add your device protocol ports here as needed.
-      # Example:
-      # - "5001:5001"
-      # - "5055:5055"
     volumes:
       - traccar_data:/opt/traccar
 
+  # Add this sidecar service to the same Compose stack as Traccar.
   traccar_logs:
-    image: natanm64/traccar-log-tools:latest
+    image: ghcr.io/natan-m64/traccar-log-tools:latest
     restart: unless-stopped
     depends_on:
       - traccar
