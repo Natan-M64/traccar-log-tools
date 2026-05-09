@@ -1,0 +1,36 @@
+services:
+  traccar:
+    image: traccar/traccar:latest
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+      # Add your device protocol ports here as needed.
+      # Example:
+      # - "5001:5001"
+      # - "5055:5055"
+    volumes:
+      - traccar_data:/opt/traccar
+
+  traccar_logs:
+    image: Natan-M64/traccar-log-tools:latest
+    restart: unless-stopped
+    depends_on:
+      - traccar
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "25m"
+        max-file: "2"
+    environment:
+      LOG_FILE: /opt/traccar/logs/tracker-server.log
+      LOG_DIR: /opt/traccar/logs
+    volumes:
+      # Must be the same volume used by the Traccar container.
+      # Mounted read-only for safety.
+      - traccar_data:/opt/traccar:ro
+    network_mode: "none"
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  traccar_data:
