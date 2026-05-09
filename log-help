@@ -1,0 +1,52 @@
+#!/bin/sh
+
+LOG_FILE="${LOG_FILE:-/opt/traccar/logs/tracker-server.log}"
+LOG_DIR="${LOG_DIR:-/opt/traccar/logs}"
+
+cat <<EOF
+=================================================
+              Traccar Log Tools
+=================================================
+
+Main log file:
+  ${LOG_FILE}
+
+Log directory:
+  ${LOG_DIR}
+
+Quick aliases:
+  logs      -> follow current log with tail -f
+  follow    -> follow current log with tail -F
+  errors    -> show latest errors/warnings
+  warnings  -> show latest warnings
+  today     -> show latest log lines from today
+  gzerrors  -> search errors in compressed logs
+  listlogs  -> list log files
+  ll        -> ls -lah
+  log-help  -> show this help message
+
+Examples:
+
+Search by IMEI:
+  grep "000000000000000" "$LOG_FILE" | tail -50
+
+Search by IP address:
+  grep "0.0.0.0" "$LOG_FILE" | tail -50
+
+Search by protocol:
+  grep -i "gt06" "$LOG_FILE" | tail -100
+
+Search common problems:
+  grep -iE "error|exception|failed|timeout|warn" "$LOG_FILE" | tail -100
+
+Search compressed logs:
+  zgrep -i "000000000000000" "$LOG_DIR"/*.gz | tail -100
+
+Live follow:
+  tail -F "$LOG_FILE"
+
+List log files:
+  ls -lah "$LOG_DIR"
+
+=================================================
+EOF
