@@ -12,7 +12,7 @@ services:
       - traccar_data:/opt/traccar
 
   traccar_logs:
-    image: Natan-M64/traccar-log-tools:latest
+    image: natanm64/traccar-log-tools:latest
     restart: unless-stopped
     depends_on:
       - traccar
