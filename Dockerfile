@@ -1,0 +1,26 @@
+FROM alpine:3.20
+
+LABEL org.opencontainers.image.title="traccar-log-tools"
+LABEL org.opencontainers.image.description="Lightweight Docker sidecar for viewing and searching Traccar logs"
+LABEL org.opencontainers.image.source="https://github.com/YOUR_USERNAME/traccar-log-tools"
+LABEL org.opencontainers.image.licenses="MIT"
+
+RUN apk add --no-cache \
+    bash \
+    grep \
+    coreutils \
+    less \
+    gzip \
+    sed \
+    gawk \
+    findutils
+
+COPY entrypoint.sh /entrypoint.sh
+COPY profile.sh /etc/profile
+
+RUN chmod +x /entrypoint.sh
+
+ENV LOG_FILE=/opt/traccar/logs/tracker-server.log
+ENV LOG_DIR=/opt/traccar/logs
+
+CMD ["/entrypoint.sh"]
