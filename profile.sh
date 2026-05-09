@@ -1,3 +1,5 @@
+clear
+
 export LOG_FILE="${LOG_FILE:-/opt/traccar/logs/tracker-server.log}"
 export LOG_DIR="${LOG_DIR:-/opt/traccar/logs}"
 
