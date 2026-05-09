@@ -17,11 +17,15 @@ RUN apk add --no-cache \
 
 COPY entrypoint.sh /entrypoint.sh
 COPY profile.sh /etc/profile
+COPY profile.sh /root/.profile
+COPY profile.sh /root/.ashrc
+COPY profile.sh /root/.bashrc
+COPY log-help /usr/local/bin/log-help
 
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh /usr/local/bin/log-help
 
 ENV LOG_FILE=/opt/traccar/logs/tracker-server.log
 ENV LOG_DIR=/opt/traccar/logs
-ENV ENV=/etc/profile
+ENV ENV=/root/.ashrc
 
 ENTRYPOINT ["/entrypoint.sh"]
