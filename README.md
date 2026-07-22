@@ -20,7 +20,7 @@ In many Docker deployments, `docker logs` only shows startup messages, database 
 
 This sidecar solves that by:
 
-- following `tracker-server.log` with `tail -F`;
+- following `tracker-server.log` with `tail -n "$TAIL_LINES" -F`;
 - making Traccar logs visible through Docker and Portainer logs;
 - providing quick shell tools for searching logs;
 - supporting compressed rotated logs with `zgrep`;
@@ -37,6 +37,7 @@ This sidecar solves that by:
 - Useful from Portainer, including mobile access.
 - Includes `grep`, `zgrep`, `awk`, `sed`, `less`, `tail`, `find`, and common shell utilities.
 - Interactive shell help menu with examples.
+- Optional HTTP API mode for read-only IMEI log queries.
 - Read-only access to the Traccar data volume.
 - No network required.
 - Safe default Docker logging limits.
@@ -152,6 +153,102 @@ In Portainer, open the `traccar_logs` container and use the Logs tab.
 
 ---
 
+## Optional HTTP API mode
+
+The default container mode is still local and safe: it follows the log with `tail -n "$TAIL_LINES" -F` and does not need network access.
+
+If you need an external tool, automation, or AI assistant to inspect logs without SSH, run a separate API container with `LOG_MODE=api`.
+
+Available endpoints:
+
+| Endpoint | Description |
+|---|---|
+| `GET /health` | Health check |
+| `GET /device/{imei}?limit=300` | Returns the latest matching lines for an IMEI as JSON |
+| `GET /stream/{imei}` | Streams new matching lines for an IMEI using Server-Sent Events |
+
+Example:
+
+```yaml
+traccar_logs_api:
+  image: ghcr.io/natan-m64/traccar-log-tools:latest
+  restart: unless-stopped
+  environment:
+    LOG_MODE: api
+    LOG_FILE: /opt/traccar/logs/tracker-server.log
+    LOG_DIR: /opt/traccar/logs
+    API_TOKEN: "change-this-token"
+    API_PORT: "8080"
+    MAX_LINES: "2000"
+  volumes:
+    - traccar_data:/opt/traccar:ro
+  ports:
+    - "8080:8080"
+  security_opt:
+    - no-new-privileges:true
+```
+
+Query an IMEI:
+
+```bash
+curl -H "Authorization: Bearer change-this-token" \
+  "http://localhost:8080/device/000000000000000?limit=50"
+```
+
+Follow an IMEI live:
+
+```bash
+curl -N -H "Authorization: Bearer change-this-token" \
+  "http://localhost:8080/stream/000000000000000"
+```
+
+For public access, put this service behind HTTPS using Traefik, Cloudflare Tunnel, Nginx, or another reverse proxy. Keep the Traccar volume mounted as read-only.
+
+Traefik example:
+
+```yaml
+traccar_logs_api:
+  image: ghcr.io/natan-m64/traccar-log-tools:latest
+  restart: unless-stopped
+  environment:
+    LOG_MODE: api
+    LOG_FILE: /opt/traccar/logs/tracker-server.log
+    API_TOKEN: "change-this-token"
+  volumes:
+    - traccar_data:/opt/traccar:ro
+  labels:
+    - "traefik.enable=true"
+    - "traefik.http.routers.traccar-logs-api.rule=Host(`logs.example.com`)"
+    - "traefik.http.routers.traccar-logs-api.entrypoints=websecure"
+    - "traefik.http.routers.traccar-logs-api.tls.certresolver=letsencrypt"
+    - "traefik.http.services.traccar-logs-api.loadbalancer.server.port=8080"
+  security_opt:
+    - no-new-privileges:true
+```
+
+### API environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `LOG_MODE` | `tail` | Use `api` to start the HTTP API instead of `tail -F` |
+| `API_TOKEN` | empty | Required in API mode. Use as `Authorization: Bearer <token>` |
+| `API_HOST` | `0.0.0.0` | API bind host |
+| `API_PORT` | `8080` | API bind port |
+| `MAX_LINES` | `2000` | Maximum accepted `limit` for `/device/{imei}` |
+| `TAIL_LINES` | `200` | Number of recent lines shown when starting `tail`/`follow` mode |
+| `ALLOW_NO_AUTH` | `false` | Allows API without token only for local testing |
+
+Security recommendations:
+
+- use a long random `API_TOKEN`;
+- publish only through HTTPS;
+- do not expose the API publicly without a token;
+- keep the volume mounted with `:ro`;
+- do not mount the Docker socket;
+- limit access further with reverse proxy rules if possible.
+
+---
+
 ## Interactive shell
 
 Open a shell inside the container:
@@ -170,8 +267,8 @@ When the shell opens, a help menu is displayed with aliases and examples.
 
 | Alias | Description |
 |---|---|
-| `logs` | Follow the current log with `tail -f` |
-| `follow` | Follow the current log with `tail -F`, useful for rotated logs |
+| `logs` | Follow the current log with `tail -n "$TAIL_LINES" -f` |
+| `follow` | Follow the current log with `tail -n "$TAIL_LINES" -F`, useful for rotated logs |
 | `errors` | Show recent errors, exceptions, warnings, failures, and timeouts |
 | `warnings` | Show recent warnings |
 | `today` | Show recent log lines from today |
@@ -186,37 +283,37 @@ When the shell opens, a help menu is displayed with aliases and examples.
 Search common problems:
 
 ```bash
-grep -iE "error|exception|failed|timeout|warn" "$LOG_FILE" | tail -100
+grep -iE "error|exception|failed|timeout|warn" "$LOG_FILE" | tail -n 100
 ```
 
 Search by IMEI:
 
 ```bash
-grep "000000000000000" "$LOG_FILE" | tail -50
+grep "000000000000000" "$LOG_FILE" | tail -n 50
 ```
 
 Search by IP address:
 
 ```bash
-grep "0.0.0.0" "$LOG_FILE" | tail -50
+grep "0.0.0.0" "$LOG_FILE" | tail -n 50
 ```
 
 Search by protocol:
 
 ```bash
-grep -i "gt06" "$LOG_FILE" | tail -100
+grep -i "gt06" "$LOG_FILE" | tail -n 100
 ```
 
 Search compressed rotated logs:
 
 ```bash
-zgrep -i "000000000000000" "$LOG_DIR"/*.gz | tail -100
+zgrep -i "000000000000000" "$LOG_DIR"/*.gz | tail -n 100
 ```
 
 Follow live logs:
 
 ```bash
-tail -F "$LOG_FILE"
+tail -n "$TAIL_LINES" -F "$LOG_FILE"
 ```
 
 List log files:
@@ -233,12 +330,14 @@ ls -lah "$LOG_DIR"
 |---|---|---|
 | `LOG_FILE` | `/opt/traccar/logs/tracker-server.log` | Main Traccar log file to follow |
 | `LOG_DIR` | `/opt/traccar/logs` | Traccar log directory |
+| `TAIL_LINES` | `200` | Number of recent lines shown when starting `tail`/`follow` mode |
+| `LOG_MODE` | `tail` | Use `api` to start the optional HTTP API |
 
 ---
 
 ## Security notes
 
-This container is intended to be read-only and isolated:
+In default `tail` mode, this container is intended to be read-only and isolated:
 
 ```yaml
 volumes:
@@ -253,8 +352,9 @@ security_opt:
 Recommended behavior:
 
 - mount the Traccar volume as read-only;
-- do not expose ports;
-- do not connect this container to public networks;
+- do not expose ports for the default `tail` container;
+- do not connect the default `tail` container to public networks;
+- if using API mode, expose it only behind HTTPS and Bearer token authentication;
 - do not mount the Docker socket;
 - limit Docker JSON logs with `max-size` and `max-file`.
 

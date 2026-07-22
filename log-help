@@ -2,6 +2,7 @@
 
 LOG_FILE="${LOG_FILE:-/opt/traccar/logs/tracker-server.log}"
 LOG_DIR="${LOG_DIR:-/opt/traccar/logs}"
+TAIL_LINES="${TAIL_LINES:-200}"
 
 cat <<EOF
 =================================================
@@ -14,9 +15,12 @@ Main log file:
 Log directory:
   ${LOG_DIR}
 
+Tail lines:
+  ${TAIL_LINES}
+
 Quick aliases:
-  logs      -> follow current log with tail -f
-  follow    -> follow current log with tail -F
+  logs      -> follow current log with tail -n "\$TAIL_LINES" -f
+  follow    -> follow current log with tail -n "\$TAIL_LINES" -F
   errors    -> show latest errors/warnings
   warnings  -> show latest warnings
   today     -> show latest log lines from today
@@ -28,22 +32,22 @@ Quick aliases:
 Examples:
 
 Search by IMEI:
-  grep "000000000000000" "$LOG_FILE" | tail -50
+  grep "000000000000000" "$LOG_FILE" | tail -n 50
 
 Search by IP address:
-  grep "0.0.0.0" "$LOG_FILE" | tail -50
+  grep "0.0.0.0" "$LOG_FILE" | tail -n 50
 
 Search by protocol:
-  grep -i "gt06" "$LOG_FILE" | tail -100
+  grep -i "gt06" "$LOG_FILE" | tail -n 100
 
 Search common problems:
-  grep -iE "error|exception|failed|timeout|warn" "$LOG_FILE" | tail -100
+  grep -iE "error|exception|failed|timeout|warn" "$LOG_FILE" | tail -n 100
 
 Search compressed logs:
-  zgrep -i "000000000000000" "$LOG_DIR"/*.gz | tail -100
+  zgrep -i "000000000000000" "$LOG_DIR"/*.gz | tail -n 100
 
 Live follow:
-  tail -F "$LOG_FILE"
+  tail -n "$TAIL_LINES" -F "$LOG_FILE"
 
 List log files:
   ls -lah "$LOG_DIR"

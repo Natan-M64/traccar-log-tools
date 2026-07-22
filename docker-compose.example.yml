@@ -31,5 +31,26 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # Optional HTTP API for external read-only log queries.
+  # Enable this only behind HTTPS and authentication middleware/proxy rules.
+  traccar_logs_api:
+    image: ghcr.io/natan-m64/traccar-log-tools:latest
+    restart: unless-stopped
+    depends_on:
+      - traccar
+    environment:
+      LOG_MODE: api
+      LOG_FILE: /opt/traccar/logs/tracker-server.log
+      LOG_DIR: /opt/traccar/logs
+      API_TOKEN: "change-this-token"
+      API_PORT: "8080"
+      MAX_LINES: "2000"
+    volumes:
+      - traccar_data:/opt/traccar:ro
+    ports:
+      - "8080:8080"
+    security_opt:
+      - no-new-privileges:true
+
 volumes:
   traccar_data:
