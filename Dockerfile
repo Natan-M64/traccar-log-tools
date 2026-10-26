@@ -17,6 +17,7 @@ RUN apk add --no-cache \
     findutils
 
 COPY entrypoint.sh /entrypoint.sh
+COPY log-janitor.sh /usr/local/bin/log-janitor
 COPY api_server.py /api_server.py
 COPY profile.sh /etc/profile
 COPY profile.sh /root/.profile
@@ -24,7 +25,7 @@ COPY profile.sh /root/.ashrc
 COPY profile.sh /root/.bashrc
 COPY log-help /usr/local/bin/log-help
 
-RUN chmod +x /entrypoint.sh /api_server.py /usr/local/bin/log-help
+RUN chmod +x /entrypoint.sh /api_server.py /usr/local/bin/log-help /usr/local/bin/log-janitor
 
 ENV LOG_FILE=/opt/traccar/logs/tracker-server.log
 ENV LOG_DIR=/opt/traccar/logs
