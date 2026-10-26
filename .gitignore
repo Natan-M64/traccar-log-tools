@@ -1,0 +1,21 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# OS / Editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Tooling metadata
+.serena/
+.kilo/
+
+# Local environment and temporary logs
+.env
+.env.*
+*.log
+*.gz
