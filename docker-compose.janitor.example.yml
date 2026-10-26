@@ -1,0 +1,20 @@
+services:
+  traccar_logs:
+    environment:
+      LOG_JANITOR: "true"
+      LOG_RETENTION_DAYS: "15"
+      LOG_CLEAN_INTERVAL: "86400"
+      LOG_GZIP_LEVEL: "9"
+    volumes:
+      - type: volume
+        source: traccar_data
+        target: /opt/traccar
+        read_only: true
+      - type: volume
+        source: traccar_data
+        target: /opt/traccar/logs
+        volume:
+          subpath: logs
+
+volumes:
+  traccar_data:

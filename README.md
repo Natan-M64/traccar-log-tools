@@ -1,5 +1,9 @@
 # traccar-log-tools
 
+[![CI](https://github.com/Natan-M64/traccar-log-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/Natan-M64/traccar-log-tools/actions/workflows/ci.yml)
+[![Docker Publish](https://github.com/Natan-M64/traccar-log-tools/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Natan-M64/traccar-log-tools/actions/workflows/docker-publish.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Lightweight Docker sidecar for viewing and searching Traccar logs from Docker, Portainer, SSH, or mobile devices.
 
 `traccar-log-tools` makes the Traccar `tracker-server.log` available through `docker logs` while also providing an interactive shell with useful commands and aliases such as `errors`, `warnings`, `today`, `zgrep`, `grep`, `tail`, and `less`.
@@ -62,7 +66,14 @@ services:
       - traccar_data:/opt/traccar:ro
 ```
 
-The `:ro` flag is recommended because this container only needs to read log files.
+The `:ro` flag is recommended for read-only log viewing. To enable optional rotation cleanup in the same container, use the maintenance override instead:
+
+```sh
+docker compose -f docker-compose.example.yml -f docker-compose.janitor.example.yml config
+docker compose -f docker-compose.example.yml -f docker-compose.janitor.example.yml up -d
+```
+
+The default Compose file only reads logs. The maintenance override enables `LOG_JANITOR=true` and mounts only the `logs` subpath with write access while keeping the rest of `/opt/traccar` read-only. Initialize a new Traccar volume using the base stack first; the logs directory must already exist inside `traccar_data` before enabling maintenance, to preserve volume initialization; Docker Engine 26+ and a Compose release supporting volume `subpath` are required. Confirm these versions and the volume name on the deployment host before applying the override. Use the files together as a single stack, not as two independent stacks. The optional API service remains read-only.
 
 ---
 
@@ -332,6 +343,10 @@ ls -lah "$LOG_DIR"
 | `LOG_DIR` | `/opt/traccar/logs` | Traccar log directory |
 | `TAIL_LINES` | `200` | Number of recent lines shown when starting `tail`/`follow` mode |
 | `LOG_MODE` | `tail` | Use `api` to start the optional HTTP API |
+| `LOG_JANITOR` | `false` | Set to `true` to run log rotation and retention cleanup in the background |
+| `LOG_RETENTION_DAYS` | `15` | Days to keep rotated log files before deletion |
+| `LOG_CLEAN_INTERVAL` | `86400` | Interval in seconds between log cleanup passes |
+| `LOG_GZIP_LEVEL` | `9` | Compression level for gzip (1-9) |
 
 ---
 
@@ -357,6 +372,18 @@ Recommended behavior:
 - if using API mode, expose it only behind HTTPS and Bearer token authentication;
 - do not mount the Docker socket;
 - limit Docker JSON logs with `max-size` and `max-file`.
+
+---
+
+## Testing
+
+The HTTP API's input validation, query-limit handling, and bounded log matching are covered with Python standard-library unit tests:
+
+```bash
+python -m unittest -v
+```
+
+GitHub Actions runs the tests, compiles the Python sources, and builds the Docker image for every pull request and push to `main`.
 
 ---
 
